@@ -2,7 +2,9 @@
 
 import sys
 
-from PySide6.QtWidgets import QApplication, QMainWindow
+from PySide6.QtWidgets import QApplication
+
+from ui.main_window import MainWindow
 
 
 def main() -> None:
@@ -10,9 +12,7 @@ def main() -> None:
 
     app = QApplication(sys.argv)
 
-    window = QMainWindow()
-    window.setWindowTitle("NOVA AI")
-    window.resize(1000, 700)
+    window = MainWindow()
     window.show()
 
     sys.exit(app.exec())
@@ -20,4 +20,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    
