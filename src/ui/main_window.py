@@ -52,25 +52,45 @@ class MainWindow(QMainWindow):
             "font-size:24px;font-weight:bold;padding:10px;"
         )
 
-        chat_area = QTextEdit()
-        chat_area.setReadOnly(True)
-        chat_area.setPlaceholderText(
+        self.chat_area = QTextEdit()
+        self.chat_area.setReadOnly(True)
+        self.chat_area.setPlaceholderText(
             "AI conversation will appear here..."
         )
 
         input_layout = QHBoxLayout()
 
-        message_box = QLineEdit()
-        message_box.setPlaceholderText("Type your message...")
+        self.message_box = QLineEdit()
+        self.message_box.setPlaceholderText("Type your message...")
 
-        send_button = QPushButton("Send")
+        self.send_button = QPushButton("Send")
 
-        input_layout.addWidget(message_box)
-        input_layout.addWidget(send_button)
+        input_layout.addWidget(self.message_box)
+        input_layout.addWidget(self.send_button)
 
         right_layout.addWidget(title)
-        right_layout.addWidget(chat_area)
+        right_layout.addWidget(self.chat_area)
         right_layout.addLayout(input_layout)
 
         main_layout.addWidget(sidebar)
         main_layout.addLayout(right_layout)
+
+        # Signals
+        self.send_button.clicked.connect(self.send_message)
+        self.message_box.returnPressed.connect(self.send_message)
+
+    def send_message(self) -> None:
+        """Handle sending a chat message."""
+
+        message = self.message_box.text().strip()
+
+        if not message:
+            return
+
+        self.chat_area.append(f"<b>You:</b> {message}")
+        self.chat_area.append(
+            "<b>NOVA:</b> AI integration coming soon..."
+        )
+        self.chat_area.append("")
+
+        self.message_box.clear()
