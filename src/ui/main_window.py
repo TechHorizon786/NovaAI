@@ -13,6 +13,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from core import ChatManager
+
 
 class MainWindow(QMainWindow):
     """Main application window."""
@@ -22,6 +24,8 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("NOVA AI")
         self.resize(1200, 750)
+
+        self.chat_manager = ChatManager()
 
         self._setup_ui()
 
@@ -88,9 +92,12 @@ class MainWindow(QMainWindow):
             return
 
         self.chat_area.append(f"<b>You:</b> {message}")
-        self.chat_area.append(
-            "<b>NOVA:</b> AI integration coming soon..."
-        )
+
+        response = self.chat_manager.get_response(message)
+
+        if response:
+            self.chat_area.append(f"<b>NOVA:</b> {response}")
+
         self.chat_area.append("")
 
         self.message_box.clear()
