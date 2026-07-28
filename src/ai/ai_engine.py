@@ -18,14 +18,14 @@ class AIEngine:
     def __init__(self) -> None:
         self._client = GeminiClient()
 
-    def generate_response(self, message: str) -> str:
+    def generate_response(self, prompt: str) -> str:
         """
         Generate an AI response.
         """
 
-        message = message.strip()
+        prompt = prompt.strip()
 
-        if not message:
+        if not prompt:
             return ""
 
-        return self._client.generate_response(message)
+        return self._client.generate_response(prompt)

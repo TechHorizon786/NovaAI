@@ -17,6 +17,10 @@ class GeminiClient:
     """Handles communication with the Gemini API."""
 
     def __init__(self) -> None:
+        """
+        Initialize the Gemini client.
+        """
+
         load_dotenv()
 
         api_key = os.getenv("GEMINI_API_KEY")
@@ -28,15 +32,20 @@ class GeminiClient:
 
         self.client = genai.Client(api_key=api_key)
 
-    def generate_response(self, message: str) -> str:
+    def generate_response(self, prompt: str) -> str:
         """
         Generate a response from Gemini.
         """
 
+        prompt = prompt.strip()
+
+        if not prompt:
+            return ""
+
         try:
             response = self.client.models.generate_content(
-             model="gemini-3.6-flash",
-                contents=message,
+                model="gemini-3.6-flash",
+                contents=prompt,
             )
 
             if response.text:

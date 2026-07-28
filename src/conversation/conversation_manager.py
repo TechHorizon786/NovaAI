@@ -42,6 +42,18 @@ class ConversationManager:
             self.history.get_messages()
         )
 
+    def get_messages(self):
+        """
+        Return all conversation messages.
+        """
+        return self.history.get_messages()
+
+    def get_recent_messages(self, limit: int = 10):
+        """
+        Return the most recent conversation messages.
+        """
+        return self.history.get_recent_messages(limit)
+
     def clear_conversation(self) -> None:
         """
         Reset the current conversation.
@@ -60,3 +72,9 @@ class ConversationManager:
         Return the total number of messages.
         """
         return self.session.message_count
+
+    def is_empty(self) -> bool:
+        """
+        Return True if the conversation is empty.
+        """
+        return self.history.is_empty()
