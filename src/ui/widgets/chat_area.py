@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from ui.widgets.chat_bubble import ChatBubble
+from ui.widgets.typing_indicator import TypingIndicator
 
 
 class ChatArea(QScrollArea):
@@ -48,11 +49,19 @@ class ChatArea(QScrollArea):
         self._bubbles: list[ChatBubble] = []
         self._auto_scroll_pending = False
 
+        self._typing_row: QWidget | None = None
+        self._typing_indicator: TypingIndicator | None = None
+
         # Content height change hota hai to scroll range update hota hai.
         # Yahin pe reliable auto-scroll trigger karenge.
         self.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
     def add_message(self, role: str, text: str) -> None:
+        # Agar typing indicator visible hai, messages uske upar add honge to weird lagega.
+        # Better: new message se pehle indicator hata do.
+        if self._typing_row is not None:
+            self.hide_typing_indicator()
+
         should_auto_scroll = self._is_near_bottom()
 
         row = QWidget()
@@ -80,6 +89,47 @@ class ChatArea(QScrollArea):
 
         if should_auto_scroll:
             self._request_scroll_to_bottom(row)
+
+    def show_typing_indicator(self) -> None:
+        if self._typing_row is not None:
+            return
+
+        should_auto_scroll = self._is_near_bottom()
+
+        row = QWidget()
+        row.setObjectName("ChatRow")
+
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(10)
+
+        indicator = TypingIndicator()
+        self._typing_row = row
+        self._typing_indicator = indicator
+
+        row_layout.addWidget(indicator, 0, Qt.AlignLeft)
+        row_layout.addStretch(1)
+
+        insert_index = max(0, self._layout.count() - 1)
+        self._layout.insertWidget(insert_index, row)
+
+        self._apply_bubble_widths()
+
+        if should_auto_scroll:
+            self._request_scroll_to_bottom(row)
+
+    def hide_typing_indicator(self) -> None:
+        if self._typing_row is None:
+            return
+
+        if self._typing_indicator is not None:
+            self._typing_indicator.stop()
+
+        self._layout.removeWidget(self._typing_row)
+        self._typing_row.deleteLater()
+
+        self._typing_row = None
+        self._typing_indicator = None
 
     def _is_near_bottom(self) -> bool:
         vbar = self.verticalScrollBar()
@@ -124,3 +174,6 @@ class ChatArea(QScrollArea):
         )
         for bubble in self._bubbles:
             bubble.set_bubble_max_width(max_width)
+
+        if self._typing_indicator is not None:
+            self._typing_indicator.set_indicator_max_width(max_width)

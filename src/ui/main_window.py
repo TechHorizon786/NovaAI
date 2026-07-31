@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QObject, QThread, QTimer, Qt, Signal
+from PySide6.QtCore import QObject, QThread, Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
 
 from core import ChatManager
 from ui.widgets.chat_area import ChatArea
-from ui.widgets.chat_bubble import ChatBubble
 
 
 class _ResponseWorker(QObject):
@@ -52,12 +51,6 @@ class MainWindow(QMainWindow):
         self._response_thread: QThread | None = None
         self._response_worker: _ResponseWorker | None = None
         self._busy = False
-
-        self._thinking_timer = QTimer(self)
-        self._thinking_timer.setInterval(350)
-        self._thinking_timer.timeout.connect(self._on_thinking_tick)
-        self._thinking_step = 0
-        self._thinking_bubble: ChatBubble | None = None
 
         self._setup_ui()
 
@@ -177,6 +170,17 @@ class MainWindow(QMainWindow):
 
         QLabel#BubbleText{
             color:white;
+            font-size:15px;
+            background:transparent;
+        }
+
+        QFrame#TypingIndicator{
+            background:#1F2937;
+            border-radius:18px;
+        }
+
+        QLabel#TypingText{
+            color:#E5E7EB;
             font-size:15px;
             background:transparent;
         }
@@ -311,11 +315,8 @@ class MainWindow(QMainWindow):
 
         self.chat_area.add_message(role="user", text=message)
 
-        # Thinking bubble (will be updated with final response)
-        self.chat_area.add_message(role="assistant", text="Generating...")
-        self._thinking_bubble = self._get_last_bubble()
-        self._thinking_step = 0
-        self._thinking_timer.start()
+        # Dedicated typing indicator (widget)
+        self.chat_area.show_typing_indicator()
         self.chat_area.scroll_to_bottom()
 
         # Background thread
@@ -337,35 +338,22 @@ class MainWindow(QMainWindow):
         self._response_worker = worker
         thread.start()
 
-    def _get_last_bubble(self) -> ChatBubble | None:
-        bubbles = self.chat_area.findChildren(ChatBubble)
-        return bubbles[-1] if bubbles else None
-
-    def _on_thinking_tick(self) -> None:
-        if not self._thinking_bubble:
-            return
-        self._thinking_step = (self._thinking_step + 1) % 4
-        dots = "." * self._thinking_step
-        self._thinking_bubble.set_text(f"Generating{dots}")
-        self.chat_area.scroll_to_bottom()
-
     def _on_response_ready(self, response: str) -> None:
-        self._thinking_timer.stop()
+        self.chat_area.hide_typing_indicator()
 
-        if self._thinking_bubble:
-            final_text = response.strip() or "No response received."
-            self._thinking_bubble.set_text(final_text)
+        final_text = response.strip() or "No response received."
+        self.chat_area.add_message(role="assistant", text=final_text)
 
-        self._thinking_bubble = None
         self.chat_area.scroll_to_bottom()
         self._set_busy(False)
 
     def _on_response_failed(self, error: str) -> None:
-        self._thinking_timer.stop()
+        self.chat_area.hide_typing_indicator()
 
-        if self._thinking_bubble:
-            self._thinking_bubble.set_text("Sorry, response generate nahi ho paya. Try again.")
-        self._thinking_bubble = None
+        self.chat_area.add_message(
+            role="assistant",
+            text="Sorry, response generate nahi ho paya. Try again.",
+        )
 
         self.chat_area.scroll_to_bottom()
         self._set_busy(False)
