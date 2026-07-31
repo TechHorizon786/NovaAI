@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame, QLabel, QSizePolicy, QVBoxLayout
+from PySide6.QtCore import QTimer, Qt
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QSizePolicy, QVBoxLayout
 
 
 class ChatBubble(QFrame):
@@ -38,7 +39,6 @@ class ChatBubble(QFrame):
         if self._role == self.ROLE_ASSISTANT and "```" in text:
             segments = self._split_text_and_code_blocks(text)
             for seg_type, seg_text in segments:
-                # avoid useless empty text widgets
                 if seg_type == "text" and not seg_text.strip():
                     continue
 
@@ -92,6 +92,21 @@ class ChatBubble(QFrame):
             border:1px solid #334155;
             border-radius:12px;
         }
+        QPushButton#CodeCopyButton{
+            background:#1F2937;
+            color:#E5E7EB;
+            border:none;
+            border-radius:10px;
+            padding:6px 10px;
+            font-weight:600;
+        }
+        QPushButton#CodeCopyButton:hover{
+            background:#334155;
+        }
+        QPushButton#CodeCopyButton:disabled{
+            background:#0B1220;
+            color:#94A3B8;
+        }
         QLabel#CodeBlockText{
             background:transparent;
             color:#E2E8F0;
@@ -102,11 +117,18 @@ class ChatBubble(QFrame):
 
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(12, 10, 12, 10)
-        layout.setSpacing(0)
+        layout.setSpacing(8)
+
+        copy_btn = QPushButton("Copy")
+        copy_btn.setObjectName("CodeCopyButton")
+        copy_btn.setCursor(Qt.PointingHandCursor)
+        copy_btn.clicked.connect(lambda _=False, c=code, b=copy_btn: self._copy_code(c, b))
+
+        layout.addWidget(copy_btn, 0, Qt.AlignRight)
 
         label = QLabel(code)
         label.setObjectName("CodeBlockText")
-        label.setWordWrap(True)  # safe wrapping (no horizontal scroll yet)
+        label.setWordWrap(True)  # no horizontal scroll yet
         label.setTextFormat(Qt.PlainText)
         label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
@@ -115,6 +137,24 @@ class ChatBubble(QFrame):
 
         self._content_widgets.append(frame)
         return frame
+
+    def _copy_code(self, code: str, button: QPushButton) -> None:
+        cb = QGuiApplication.clipboard()
+        if cb is not None:
+            cb.setText(code)
+
+        button.setText("Copied")
+        button.setDisabled(True)
+
+        QTimer.singleShot(900, lambda: self._reset_copy_button(button))
+
+    def _reset_copy_button(self, button: QPushButton) -> None:
+        # button delete ho chuka ho to ignore
+        try:
+            button.setText("Copy")
+            button.setDisabled(False)
+        except RuntimeError:
+            return
 
     def _split_text_and_code_blocks(self, text: str) -> list[tuple[str, str]]:
         """
@@ -133,12 +173,10 @@ class ChatBubble(QFrame):
         for line in lines:
             if line.strip().startswith("```"):
                 if in_code:
-                    # close code block
                     segments.append(("code", "\n".join(code_buf)))
                     code_buf.clear()
                     in_code = False
                 else:
-                    # open code block (flush pending text)
                     if text_buf:
                         segments.append(("text", "\n".join(text_buf)))
                         text_buf.clear()
@@ -150,7 +188,6 @@ class ChatBubble(QFrame):
             else:
                 text_buf.append(line)
 
-        # flush remaining
         if in_code:
             segments.append(("code", "\n".join(code_buf)))
         elif text_buf:
