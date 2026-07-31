@@ -11,6 +11,8 @@ class ChatBubble(QFrame):
     def __init__(self, role: str, text: str, parent=None) -> None:
         super().__init__(parent)
 
+        self._role = role
+
         if role == self.ROLE_USER:
             self.setObjectName("BubbleUser")
         else:
@@ -22,14 +24,25 @@ class ChatBubble(QFrame):
         layout.setContentsMargins(14, 10, 14, 10)
         layout.setSpacing(0)
 
-        self._label = QLabel(text)
+        self._label = QLabel()
         self._label.setObjectName("BubbleText")
         self._label.setWordWrap(True)
-        self._label.setTextFormat(Qt.PlainText)
-        self._label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+
+        # Markdown only for assistant messages
+        if role == self.ROLE_ASSISTANT and hasattr(Qt, "MarkdownText"):
+            self._label.setTextFormat(Qt.MarkdownText)
+            self._label.setTextInteractionFlags(
+                Qt.TextSelectableByMouse | Qt.LinksAccessibleByMouse
+            )
+            self._label.setOpenExternalLinks(True)
+        else:
+            self._label.setTextFormat(Qt.PlainText)
+            self._label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
         self._label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         layout.addWidget(self._label)
+
+        self.set_text(text)
 
     def set_bubble_max_width(self, max_width: int) -> None:
         self.setMaximumWidth(max_width)
