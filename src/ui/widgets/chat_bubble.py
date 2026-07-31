@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QSizePolicy, QVBoxLayout
+from PySide6.QtWidgets import (
+    QFrame,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QVBoxLayout,
+)
 
 
 class ChatBubble(QFrame):
@@ -107,6 +114,10 @@ class ChatBubble(QFrame):
             background:#0B1220;
             color:#94A3B8;
         }
+        QScrollArea#CodeScrollArea{
+            background:transparent;
+            border:none;
+        }
         QLabel#CodeBlockText{
             background:transparent;
             color:#E2E8F0;
@@ -122,18 +133,35 @@ class ChatBubble(QFrame):
         copy_btn = QPushButton("Copy")
         copy_btn.setObjectName("CodeCopyButton")
         copy_btn.setCursor(Qt.PointingHandCursor)
-        copy_btn.clicked.connect(lambda _=False, c=code, b=copy_btn: self._copy_code(c, b))
-
+        copy_btn.clicked.connect(
+            lambda _=False, c=code, b=copy_btn: self._copy_code(c, b)
+        )
         layout.addWidget(copy_btn, 0, Qt.AlignRight)
 
-        label = QLabel(code)
-        label.setObjectName("CodeBlockText")
-        label.setWordWrap(True)  # no horizontal scroll yet
-        label.setTextFormat(Qt.PlainText)
-        label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        # Code label (NO WRAP)
+        code_label = QLabel(code)
+        code_label.setObjectName("CodeBlockText")
+        code_label.setWordWrap(False)  # important: wrap off
+        code_label.setTextFormat(Qt.PlainText)
+        code_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        code_label.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Minimum)
+        code_label.adjustSize()
+        # ensure scroll works horizontally
+        code_label.setMinimumWidth(code_label.sizeHint().width())
 
-        layout.addWidget(label)
+        scroll = QScrollArea()
+        scroll.setObjectName("CodeScrollArea")
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setWidgetResizable(False)  # important: allow horizontal scroll
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        scroll.setWidget(code_label)
+
+        # height = lines ke hisaab se (no internal vertical scrolling)
+        scroll.setFixedHeight(code_label.sizeHint().height() + 6)
+
+        layout.addWidget(scroll)
 
         self._content_widgets.append(frame)
         return frame
@@ -145,11 +173,9 @@ class ChatBubble(QFrame):
 
         button.setText("Copied")
         button.setDisabled(True)
-
         QTimer.singleShot(900, lambda: self._reset_copy_button(button))
 
     def _reset_copy_button(self, button: QPushButton) -> None:
-        # button delete ho chuka ho to ignore
         try:
             button.setText("Copy")
             button.setDisabled(False)
